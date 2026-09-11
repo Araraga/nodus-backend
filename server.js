@@ -189,9 +189,18 @@ app.post("/api/tracking", async (req, res) => {
     logTracking(String(id), numLat, numLng, numAlt);
     await db.saveTrackingData(String(id), numLat, numLng, numAlt, req.body);
 
+    // Siarkan ke Broker HiveMQ agar aplikasi mobile nodus_mobile langsung terupdate secara real-time
+    if (mqttConnected && mqttClient) {
+      mqttClient.publish(
+        `nodus/tracking/${id}`,
+        JSON.stringify({ id: String(id), lat: numLat, lng: numLng, alt: numAlt }),
+        { qos: 1 }
+      );
+    }
+
     res.json({
       success: true,
-      message: "Data tracking berhasil disimpan ke basis data.",
+      message: "Data tracking berhasil disimpan ke basis data dan disiarkan ke MQTT.",
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
